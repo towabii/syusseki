@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>出席係管理サイト（底原 永和作成）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap');
+
+  body {
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+    margin: 0;
+    padding: 100px 20px 20px 20px;
+    background: #f0f0f0;
+    user-select: none;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-align: center;
+    font-weight: 700;
+    color: #222;
+  }
+  #currentTime {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #444;
+    background: #e0e7ff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    user-select: text;
+    z-index: 2000;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  #cancelMoveBtn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #e53935;
+    color: white;
+    font-size: 0.85em;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: none;
+    user-select: none;
+    z-index: 2000;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: background-color 0.3s ease;
+  }
+  #cancelMoveBtn:hover {
+    background: #f44336;
+  }
+  #saveStatus {
+    position: fixed;
+    top: 55px;
+    right: 20px;
+    font-size: 0.9em;
+    color: rgba(0,0,0,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    user-select: none;
+    font-weight: normal;
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+    z-index: 2000;
+  }
+  #saveStatus.visible {
+    opacity: 1;
+  }
+  #modeButtons {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2000;
+  }
+  #modeButtons button {
+    padding: 8px 14px;
+    font-size: 1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #4a90e2;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    transition: background-color 0.3s ease;
+  }
+  #modeButtons button:hover {
+    background: #357abd;
+  }
+  #modeButtons button.active {
+    background: #2c5dab;
+  }
+  #toggleNameFormBtn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    padding: 8px 16px;
+    font-size: 1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #43a047;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: background-color 0.3s ease;
+    user-select: none;
+    z-index: 2000;
+  }
+  #toggleNameFormBtn:hover {
+    background: #388e3c;
+  }
+  #toggleSearchBtn {
+    position: fixed;
+    top: 15px;
+    left: 130px;
+    padding: 8px 16px;
+    font-size: 1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #00796b;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: background-color 0.3s ease;
+    user-select: none;
+    z-index: 2000;
+  }
+  #toggleSearchBtn:hover {
+    background: #004d40;
+  }
+  #seatContainer {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    transition: all 0.6s ease;
+    opacity: 1;
+  }
+  #seatContainer.fade-out {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  #seatContainer.fade-in {
+    opacity: 1;
+    transition: opacity 0.4s ease;
+  }
+  .seat-grid {
+    display: grid;
+    gap: 10px;
+    transition: all 0.6s ease;
+  }
+  .seat {
+    background: #fff;
+    border-radius: 6px;
+    border: 2px solid #333;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    font-weight: bold;
+    transition: background-color 0.3s, border-color 0.3s, transform 0.3s, opacity 0.3s;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .seat.dimmed {
+    opacity: 0.3;
+  }
+  .seat.dragging {
+    opacity: 0.5;
+    border-style: dashed;
+  }
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(1.5deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-1.5deg); }
+  }
+  .moving-mode .seat {
+    animation: shake 0.3s infinite ease-in-out;
+    cursor: grab;
+  }
+  .seat span.name {
+    pointer-events: none;
+  }
+  .seat .seat-number {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 0.75em;
+    color: #555;
+    user-select: none;
+  }
+  .present {
+    background-color: #d4f4dd;
+    border-color: #2e7d32;
+    color: #2e7d32;
+  }
+  .absent {
+    background-color: #f8d7da;
+    border-color: #b71c1c;
+    color: #b71c1c;
+  }
+  .late {
+    background-color: #fff3cd;
+    border-color: #ff9800;
+    color: #ff9800;
+  }
+  .early-leave {
+    background-color: #d1ecf1;
+    border-color: #017b92;
+    color: #017b92;
+  }
+  .status-label {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 0.75em;
+    font-weight: normal;
+    user-select: none;
+  }
+  #absentLists {
+    display: flex;
+    max-width: 900px;
+    margin: 30px auto 0;
+    gap: 15px;
+    user-select: text;
+  }
+  .absentListBlock {
+    background: #fff;
+    flex: 1;
+    border-radius: 6px;
+    padding: 10px 15px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+  .absentListBlock h2 {
+    margin-top: 0;
+    font-size: 1.1em;
+    color: #b71c1c;
+    text-align: center;
+  }
+  .absentListBlock ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 1em;
+  }
+  .absentListBlock ul li {
+    margin: 4px 0;
+    color: #333;
+    text-align: center;
+  }
+  .mode-seat {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  #seatContainer.mode-number2cols {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    max-width: 900px;
+  }
+  #seatContainer.mode-number2cols .col {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 45%;
+  }
+  #seatContainer.mode-number2cols .seat-grid {
+    grid-template-columns: 1fr;
+  }
+  #centerLine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #333;
+    left: 49.5%;
+    transform: translateX(-50%);
+    z-index: 1000;
+  }
+  #nameSettings {
+    max-width: 900px;
+    margin: 0 auto 20px;
+    background: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    user-select: text;
+    display: none;
+  }
+  #nameSettings label {
+    font-weight: 700;
+    margin-right: 5px;
+    color: #333;
+  }
+  #nameSettings input {
+    width: 140px;
+    padding: 6px 10px;
+    margin-right: 12px;
+    font-size: 1em;
+    border: 1.5px solid #ccc;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+  }
+  #nameSettings input:focus {
+    border-color: #4a90e2;
+    outline: none;
+  }
+  #nameSettings button {
+    padding: 8px 18px;
+    font-size: 1em;
+    cursor: pointer;
+    background: #4caf50;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: background-color 0.3s ease;
+  }
+  #nameSettings button:hover {
+    background: #388e3c;
+  }
+
+  /* 名前検索と履歴部分 */
+  #searchContainer {
+    position: fixed;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    padding: 10px 15px;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 1em;
+    z-index: 2100;
+    user-select: none;
+    display: none; /* 初期非表示 */
+  }
+  #searchInput {
+    width: 200px;
+    padding: 6px 10px;
+    font-size: 1em;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.3s ease;
+  }
+  #searchInput:focus {
+    border-color: #4a90e2;
+  }
+  #historySelect {
+    padding: 6px 10px;
+    font-size: 1em;
+    border-radius: 8px;
+    border: 1.5px solid #ccc;
+    outline: none;
+    cursor: pointer;
+  }
+  #historySelect:disabled {
+    background: #eee;
+    cursor: default;
+  }
+  #btnShowCurrent {
+    padding: 6px 14px;
+    font-size: 1em;
+    background: #4caf50;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  #btnShowCurrent:hover:not(:disabled) {
+    background: #388e3c;
+  }
+  #btnShowCurrent:disabled {
+    background: #8bc34a;
+    cursor: default;
+  }
+  #infoMsg {
+    position: fixed;
+    top: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    color: #666;
+    user-select: none;
+    z-index: 2100;
+  }
+  /* リセットボタン追加 */
+  #resetBtn {
+    position: fixed;
+    top: 15px;
+    left: 260px;
+    padding: 8px 16px;
+    font-size: 1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #ff9800;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: background-color 0.3s ease;
+    user-select: none;
+    z-index: 2000;
+    margin-left: 10px;
+  }
+  #resetBtn:hover {
+    background: #f57c00;
+  }
+</style>
+</head>
+<body>
+
+<div id="currentTime"></div>
+<div id="cancelMoveBtn">キャンセル</div>
+
+<h1>出席係管理</h1>
+
+<button id="toggleNameFormBtn">名前変更</button>
+<button id="toggleSearchBtn">検索/履歴表示</button>
+<!-- リセットボタン追加 -->
+<button id="resetBtn">リセット</button>
+
+<div id="nameSettings">
+  <label for="inputNumber">出席番号:</label>
+  <input type="number" id="inputNumber" min="1" max="36" placeholder="1〜36" />
+  <label for="inputName">名前（フルネーム）:</label>
+  <input type="text" id="inputName" placeholder="例:底原 永和" />
+  <button id="btnUpdateName">変更する</button>
+  <span id="updateMsg" style="margin-left:10px;color:#2e7d32;display:none;">名前を更新しました</span>
+</div>
+
+<div id="searchContainer">
+  <input type="text" id="searchInput" placeholder="名前検索..." />
+  <select id="historySelect" disabled>
+    <option value="">履歴なし</option>
+  </select>
+  <button id="btnShowCurrent" disabled>現在データを表示</button>
+</div>
+
+<div id="infoMsg"></div>
+
+<div id="seatContainer" class="mode-seat">
+  <div id="seatGrid" class="seat-grid"></div>
+  <div id="colLeft" class="col" style="display:none;"></div>
+  <div id="colRight" class="col" style="display:none;"></div>
+  <div id="centerLine" style="display:none;"></div>
+</div>
+
+<div id="absentLists">
+  <div class="absentListBlock">
+    <h2>欠席</h2>
+    <ul id="absentListAbsent"></ul>
+  </div>
+  <div class="absentListBlock">
+    <h2>遅刻</h2>
+    <ul id="absentListLate"></ul>
+  </div>
+  <div class="absentListBlock">
+    <h2>早退</h2>
+    <ul id="absentListEarly"></ul>
+  </div>
+</div>
+
+<div id="saveStatus"></div>
+
+<script>
+  const TOTAL = 36;
+  const states = ["present", "absent", "late", "early-leave"];
+  const stateLabels = ["出席", "欠席", "遅刻", "早退"];
+
+  const names = [
+    "山田 太郎","佐藤 花子","鈴木 一郎","高橋 真紀","田中 仁",
+    "伊藤 愛子","渡辺 大輔","中村 恵美","小林 誠","加藤 玲子",
+    "吉田 翔","山本 美咲","斉藤 勇","松本 里奈","井上 翔太",
+    "木村 優子","林 拓也","清水 美穂","森本 大樹","池田 彩",
+    "石川 翔太","藤田 梨沙","長谷川 勇気","橋本 真央","中島 由佳",
+    "松田 健太","村上 麻美","福田 直樹","近藤 恵","三浦 拓海",
+    "岩崎 美咲","佐々木 大輝","斎藤 亜美","村田 翔太","川口 愛",
+    "菅原 大輝","井口 明日香"
+  ];
+
+  // DOM取得
+  const currentTime = document.getElementById("currentTime");
+  const cancelMoveBtn = document.getElementById("cancelMoveBtn");
+  const saveStatus = document.getElementById("saveStatus");
+  const seatContainer = document.getElementById("seatContainer");
+  const seatGrid = document.getElementById("seatGrid");
+  const colLeft = document.getElementById("colLeft");
+  const colRight = document.getElementById("colRight");
+  const centerLine = document.getElementById("centerLine");
+  const absentListAbsent = document.getElementById("absentListAbsent");
+  const absentListLate = document.getElementById("absentListLate");
+  const absentListEarly = document.getElementById("absentListEarly");
+
+  const modeButtons = {
+    seat: document.createElement("button"),
+    number2cols: document.createElement("button")
+  };
+  modeButtons.seat.textContent = "6列席表示";
+  modeButtons.number2cols.textContent = "2列席表示";
+  modeButtons.seat.classList.add("active");
+  modeButtons.seat.id = "modeSeatBtn";
+  modeButtons.number2cols.id = "mode2ColsBtn";
+
+  // ボタン配置
+  const modeButtonsDiv = document.createElement("div");
+  modeButtonsDiv.id = "modeButtons";
+  modeButtonsDiv.appendChild(modeButtons.seat);
+  modeButtonsDiv.appendChild(modeButtons.number2cols);
+  document.body.appendChild(modeButtonsDiv);
+
+  // 名前変更関連
+  const toggleNameFormBtn = document.getElementById("toggleNameFormBtn");
+  const nameSettings = document.getElementById("nameSettings");
+  const inputNumber = document.getElementById("inputNumber");
+  const inputName = document.getElementById("inputName");
+  const btnUpdateName = document.getElementById("btnUpdateName");
+  const updateMsg = document.getElementById("updateMsg");
+
+  // 検索・履歴関連
+  const toggleSearchBtn = document.getElementById("toggleSearchBtn");
+  const searchContainer = document.getElementById("searchContainer");
+  const searchInput = document.getElementById("searchInput");
+  const historySelect = document.getElementById("historySelect");
+  const btnShowCurrent = document.getElementById("btnShowCurrent");
+  const infoMsg = document.getElementById("infoMsg");
+
+  // リセットボタン
+  const resetBtn = document.getElementById("resetBtn");
+
+  let seats = [];
+  let currentMode = "seat";
+  let movingMode = false;
+  let draggedSeat = null;
+  let longPressTimer = null;
+  let searchFilter = "";
+  let viewingHistory = false;
+  let savedHistories = {}; // { dateStr: seatDataArray }
+
+  const STORAGE_KEY_CURRENT = "seatData_current";
+  const STORAGE_KEY_PREFIX_HISTORY = "seatData_history_";
+
+  function getDateTimeStr(date = new Date()) {
+    const pad = n => (n < 10 ? "0" + n : n);
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+  function getDateKey(date = new Date()) {
+    const pad = n => (n < 10 ? "0" + n : n);
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+  }
+
+  // 0時判定用
+  let prevDateKey = getDateKey();
+
+  function updateCurrentTime() {
+    const now = new Date();
+    currentTime.textContent = getDateTimeStr(now);
+
+    // 0時判定
+    const nowDateKey = getDateKey(now);
+    if (nowDateKey !== prevDateKey) {
+      prevDateKey = nowDateKey;
+      resetAllStatusToPresent();
+    }
+  }
+  setInterval(updateCurrentTime, 1000);
+  updateCurrentTime();
+
+  function showSaveStatus(msg) {
+    saveStatus.textContent = msg;
+    saveStatus.classList.add("visible");
+    setTimeout(() => saveStatus.classList.remove("visible"), 1800);
+  }
+
+  function saveSeats() {
+    if(viewingHistory) return;
+    const dataToSave = seats.map(seat => ({
+      seatNumber: Number(seat.dataset.seatNumber),
+      name: seat.querySelector(".name").textContent,
+      state: seat.dataset.state
+    }));
+    localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(dataToSave));
+    const dateKey = getDateKey();
+    localStorage.setItem(STORAGE_KEY_PREFIX_HISTORY + dateKey, JSON.stringify(dataToSave));
+    showSaveStatus("保存しました (" + dateKey + ")");
+  }
+
+  function loadSeats() {
+    const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
+    if(!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function loadHistoriesList() {
+    savedHistories = {};
+    historySelect.innerHTML = "";
+    for(let i=0; i<localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if(key && key.startsWith(STORAGE_KEY_PREFIX_HISTORY)) {
+        const date = key.slice(STORAGE_KEY_PREFIX_HISTORY.length);
+        savedHistories[date] = null;
+      }
+    }
+    const dates = Object.keys(savedHistories).sort();
+    if(dates.length === 0) {
+      historySelect.innerHTML = '<option value="">履歴なし</option>';
+      historySelect.disabled = true;
+      btnShowCurrent.disabled = true;
+    } else {
+      historySelect.disabled = false;
+      btnShowCurrent.disabled = false;
+      historySelect.innerHTML = '<option value="">-- 過去の履歴を選択 --</option>';
+      dates.forEach(date => {
+        const option = document.createElement("option");
+        option.value = date;
+        option.textContent = date;
+        historySelect.appendChild(option);
+      });
+    }
+  }
+
+  async function loadHistory(date) {
+    if(!date) return;
+    const raw = localStorage.getItem(STORAGE_KEY_PREFIX_HISTORY + date);
+    if(!raw) {
+      alert("該当する履歴データが見つかりません。");
+      return;
+    }
+    try {
+      const data = JSON.parse(raw);
+      seats = data.map((seatData, i) => createSeat(i, seatData.seatNumber, seatData.name, seatData.state, true));
+      currentMode = "seat";
+      renderSeats();
+      renderAbsentLists();
+      viewingHistory = true;
+      infoMsg.textContent = `履歴表示中：${date} の記録（編集不可）`;
+      searchInput.value = "";
+      updateSearchFilter("");
+      toggleNameFormBtn.disabled = true;
+      modeButtons.seat.disabled = true;
+      modeButtons.number2cols.disabled = true;
+      cancelMoveBtn.style.display = "none";
+      btnShowCurrent.disabled = false;
+      // 検索と履歴は見える状態のまま
+    } catch {
+      alert("履歴データの読み込みに失敗しました。");
+    }
+  }
+
+  function showCurrentData() {
+    viewingHistory = false;
+    toggleNameFormBtn.disabled = false;
+    modeButtons.seat.disabled = false;
+    modeButtons.number2cols.disabled = false;
+    infoMsg.textContent = "";
+    initSeats();
+  }
+
+  function createSeat(index, seatNumber, name, state="present", readOnly=false) {
+    const div = document.createElement("div");
+    div.className = "seat";
+    div.dataset.seatNumber = seatNumber;
+    div.dataset.state = state;
+
+    const seatNumSpan = document.createElement("span");
+    seatNumSpan.className = "seat-number";
+    seatNumSpan.textContent = seatNumber;
+    div.appendChild(seatNumSpan);
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "name";
+    nameSpan.textContent = name;
+    div.appendChild(nameSpan);
+
+    const stateLabel = document.createElement("span");
+    stateLabel.className = "status-label";
+    stateLabel.textContent = stateLabels[states.indexOf(state)] || "";
+    div.appendChild(stateLabel);
+
+    div.classList.add(state);
+
+    if(!readOnly) {
+      div.addEventListener("click", () => {
+        const currentIndex = states.indexOf(div.dataset.state);
+        const nextIndex = (currentIndex + 1) % states.length;
+        div.dataset.state = states[nextIndex];
+
+        states.forEach(s => div.classList.remove(s));
+        div.classList.add(div.dataset.state);
+
+        stateLabel.textContent = stateLabels[nextIndex];
+        saveSeats();
+        renderAbsentLists();
+      });
+
+      div.addEventListener("mousedown", (e) => {
+        if(!movingMode) return;
+        e.preventDefault();
+        draggedSeat = div;
+        div.classList.add("dragging");
+      });
+
+      div.addEventListener("mouseup", () => {
+        if(!movingMode || !draggedSeat) return;
+        draggedSeat.classList.remove("dragging");
+        draggedSeat = null;
+      });
+
+      div.addEventListener("mouseenter", () => {
+        if(movingMode && draggedSeat && draggedSeat !== div) {
+          swapSeats(draggedSeat, div);
+        }
+      });
+    } else {
+      div.style.cursor = "default";
+    }
+
+    return div;
+  }
+
+  function swapSeats(seatA, seatB) {
+    const idxA = seats.indexOf(seatA);
+    const idxB = seats.indexOf(seatB);
+    if(idxA < 0 || idxB < 0) return;
+
+    [seats[idxA], seats[idxB]] = [seats[idxB], seats[idxA]];
+    renderSeats();
+  }
+
+  // 2列表示時は出席番号順で 1-18が右、19-36が左
+  function renderSeats() {
+    seatGrid.innerHTML = "";
+    colLeft.innerHTML = "";
+    colRight.innerHTML = "";
+
+    const filter = searchFilter.toLowerCase();
+
+    if(currentMode === "seat") {
+      seatGrid.style.display = "grid";
+      colLeft.style.display = "none";
+      colRight.style.display = "none";
+      centerLine.style.display = "none";
+      seatGrid.className = "seat-grid mode-seat";
+
+      seats.forEach(seat => {
+        const name = seat.querySelector(".name").textContent.toLowerCase();
+        if(filter === "" || name.includes(filter)) {
+          seat.classList.remove("dimmed");
+        } else {
+          seat.classList.add("dimmed");
+        }
+        seatGrid.appendChild(seat);
+      });
+    } else if(currentMode === "number2cols") {
+      seatGrid.style.display = "none";
+      colLeft.style.display = "grid";
+      colRight.style.display = "grid";
+      centerLine.style.display = "block";
+      // 出席番号順で1-18右,19-36左
+      // 配列 seats から出席番号順にソート
+      let sortedSeats = seats.slice().sort((a, b) => {
+        const nA = Number(a.dataset.seatNumber);
+        const nB = Number(b.dataset.seatNumber);
+        return nA - nB;
+      });
+      sortedSeats.forEach((seat, i) => {
+        const name = seat.querySelector(".name").textContent.toLowerCase();
+        if(filter === "" || name.includes(filter)) {
+          seat.classList.remove("dimmed");
+        } else {
+          seat.classList.add("dimmed");
+        }
+        if (Number(seat.dataset.seatNumber) <= 18) {
+          colRight.appendChild(seat);
+        } else {
+          colLeft.appendChild(seat);
+        }
+      });
+    }
+  }
+
+  function renderAbsentLists() {
+    absentListAbsent.innerHTML = "";
+    absentListLate.innerHTML = "";
+    absentListEarly.innerHTML = "";
+
+    seats.forEach(seat => {
+      const name = seat.querySelector(".name").textContent;
+      switch(seat.dataset.state) {
+        case "absent":
+          absentListAbsent.innerHTML += `<li>${name}</li>`;
+          break;
+        case "late":
+          absentListLate.innerHTML += `<li>${name}</li>`;
+          break;
+        case "early-leave":
+          absentListEarly.innerHTML += `<li>${name}</li>`;
+          break;
+      }
+    });
+  }
+
+  function initSeats() {
+    const loadedSeats = loadSeats();
+    seats = [];
+    if(loadedSeats && loadedSeats.length === TOTAL) {
+      seats = loadedSeats.map((seatData, i) => createSeat(i, seatData.seatNumber, seatData.name, seatData.state));
+    } else {
+      seats = names.map((name, i) => createSeat(i, i + 1, name));
+    }
+    currentMode = "seat";
+    renderSeats();
+    renderAbsentLists();
+    loadHistoriesList();
+  }
+
+  function switchMode(newMode) {
+    if(newMode === currentMode) return;
+
+    seatContainer.classList.add("fade-out");
+    setTimeout(() => {
+      currentMode = newMode;
+      if(currentMode === "seat") {
+        seatContainer.classList.remove("mode-number2cols");
+        seatContainer.classList.add("mode-seat");
+        modeButtons.seat.classList.add("active");
+        modeButtons.number2cols.classList.remove("active");
+      } else {
+        seatContainer.classList.remove("mode-seat");
+        seatContainer.classList.add("mode-number2cols");
+        modeButtons.seat.classList.remove("active");
+        modeButtons.number2cols.classList.add("active");
+      }
+      renderSeats();
+      seatContainer.classList.remove("fade-out");
+      seatContainer.classList.add("fade-in");
+      setTimeout(() => seatContainer.classList.remove("fade-in"), 400);
+    }, 400);
+  }
+  modeButtons.seat.addEventListener("click", () => switchMode("seat"));
+  modeButtons.number2cols.addEventListener("click", () => switchMode("number2cols"));
+
+  toggleNameFormBtn.addEventListener("click", () => {
+    if(nameSettings.style.display === "none" || nameSettings.style.display === "") {
+      nameSettings.style.display = "block";
+      toggleNameFormBtn.textContent = "名前変更（閉じる）";
+    } else {
+      nameSettings.style.display = "none";
+      toggleNameFormBtn.textContent = "名前変更";
+    }
+  });
+
+  btnUpdateName.addEventListener("click", () => {
+    const num = Number(inputNumber.value);
+    const newName = inputName.value.trim();
+    if(num < 1 || num > TOTAL) {
+      alert(`出席番号は1〜${TOTAL}の間で入力してください。`);
+      return;
+    }
+    if(newName === "") {
+      alert("名前を入力してください。");
+      return;
+    }
+    const seatIndex = seats.findIndex(s => Number(s.dataset.seatNumber) === num);
+    if(seatIndex === -1) {
+      alert("該当する出席番号が見つかりません。");
+      return;
+    }
+    seats[seatIndex].querySelector(".name").textContent = newName;
+
+    saveSeats();
+    renderAbsentLists();
+
+    updateMsg.style.display = "inline-block";
+    setTimeout(() => updateMsg.style.display = "none", 2000);
+
+    inputNumber.value = "";
+    inputName.value = "";
+  });
+
+  cancelMoveBtn.addEventListener("click", () => {
+    movingMode = false;
+    document.body.classList.remove("moving-mode");
+    cancelMoveBtn.style.display = "none";
+    if(draggedSeat) {
+      draggedSeat.classList.remove("dragging");
+      draggedSeat = null;
+    }
+    saveSeats();
+  });
+
+  seatGrid.addEventListener("mousedown", (e) => {
+    if(movingMode || viewingHistory) return;
+    const target = e.target.closest(".seat");
+    if(!target) return;
+    longPressTimer = setTimeout(() => {
+      movingMode = true;
+      document.body.classList.add("moving-mode");
+      cancelMoveBtn.style.display = "block";
+    }, 700);
+  });
+  seatGrid.addEventListener("mouseup", (e) => clearTimeout(longPressTimer));
+  seatGrid.addEventListener("mouseleave", (e) => clearTimeout(longPressTimer));
+  seatGrid.addEventListener("mousemove", (e) => {
+    if(!movingMode || !draggedSeat || viewingHistory) return;
+    const target = e.target.closest(".seat");
+    if(target && target !== draggedSeat) {
+      swapSeats(draggedSeat, target);
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    saveSeats();
+  });
+
+  searchInput.addEventListener("input", (e) => {
+    if(viewingHistory) {
+      searchInput.value = "";
+      alert("履歴表示中は検索できません。");
+      return;
+    }
+    updateSearchFilter(e.target.value);
+  });
+
+  function updateSearchFilter(filter) {
+    searchFilter = filter.toLowerCase();
+    renderSeats();
+  }
+
+  toggleSearchBtn.addEventListener("click", () => {
+    if(searchContainer.style.display === "none" || searchContainer.style.display === "") {
+      searchContainer.style.display = "flex";
+      toggleSearchBtn.textContent = "検索/履歴非表示";
+    } else {
+      searchContainer.style.display = "none";
+      toggleSearchBtn.textContent = "検索/履歴表示";
+      searchInput.value = "";
+      updateSearchFilter("");
+    }
+  });
+
+  historySelect.addEventListener("change", () => {
+    const date = historySelect.value;
+    if(date) {
+      loadHistory(date);
+    }
+  });
+
+  btnShowCurrent.addEventListener("click", () => {
+    showCurrentData();
+    historySelect.value = "";
+    searchInput.value = "";
+    updateSearchFilter("");
+  });
+
+  // 欠席/早退/遅刻→出席に変更する処理
+  function resetAllStatusToPresent() {
+    let changed = false;
+    seats.forEach(seat => {
+      if (seat.dataset.state !== "present") {
+        seat.dataset.state = "present";
+        states.forEach(s => seat.classList.remove(s));
+        seat.classList.add("present");
+        const stateLabel = seat.querySelector(".status-label");
+        if (stateLabel) stateLabel.textContent = "出席";
+        changed = true;
+      }
+    });
+    if (changed) {
+      saveSeats();
+      renderAbsentLists();
+      showSaveStatus("全員を出席にリセットしました");
+    }
+  }
+
+  // リセットボタンイベント
+  resetBtn.addEventListener("click", () => {
+    if (confirm("全員の状態を出席にリセットしますか？")) {
+      resetAllStatusToPresent();
+    }
+  });
+
+  // 初期処理
+  initSeats();
+  toggleSearchBtn.style.display = "inline-block"; // 表示確実に
+  toggleNameFormBtn.style.display = "inline-block";
+
+</script>
+
+</body>
+</html>
