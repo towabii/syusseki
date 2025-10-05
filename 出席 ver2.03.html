@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>出席係管理サイト</title>
+        <style>
+            /* CSSは変更ありません */
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap');body{font-family:'Noto Sans JP',Arial,sans-serif;margin:0;padding:0;background:#f0f0f0;user-select:none;overflow-x:hidden}#login-container{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100vh;padding:20px;box-sizing:border-box}#login-box{background:#fff;padding:30px 40px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1);width:100%;max-width:400px;text-align:center}#login-box h2{margin-top:0;margin-bottom:10px;color:#333}#login-box p{margin-bottom:25px;color:#666;font-size:.95em}#login-box input{width:calc(100% - 20px);padding:12px 10px;margin-bottom:15px;font-size:1em;border:1.5px solid #ccc;border-radius:6px}#login-box button{width:100%;padding:12px;font-size:1.1em;font-weight:700;border:none;border-radius:8px;cursor:pointer;background:#4a90e2;color:white;transition:background-color .3s ease}#login-box button:hover{background:#357abd}#login-box button:disabled{background:#ccc;cursor:not-allowed}#login-error{color:#e53935;margin-top:15px;font-weight:bold;min-height:1.2em}#account-actions{margin-top:20px;font-size:.9em}#account-actions a{color:#555;text-decoration:underline;cursor:pointer;margin:0 5px}#account-actions a:hover{color:#111}#main-container{padding:100px 20px 20px 20px}h1{text-align:center;font-weight:700;color:#222}#currentTime{position:fixed;top:15px;left:50%;transform:translateX(-50%);font-size:1.1em;font-weight:600;color:#444;background:#e0e7ff;padding:6px 14px;border-radius:20px;box-shadow:0 2px 6px rgba(0,0,0,0.15);user-select:text;z-index:2000;font-family:'Courier New',Courier,monospace}#cancelMoveBtn{position:fixed;top:15px;right:15px;background:#e53935;color:white;font-size:.85em;padding:6px 12px;border-radius:6px;cursor:pointer;display:none;user-select:none;z-index:2000;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.25);transition:background-color .3s ease}#cancelMoveBtn:hover{background:#f44336}#saveStatus{position:fixed;top:55px;right:20px;font-size:.9em;color:rgba(0,0,0,0.5);pointer-events:none;opacity:0;transition:opacity .6s ease;user-select:none;font-weight:normal;font-family:'Noto Sans JP',Arial,sans-serif;z-index:2000}#modeButtons{position:fixed;bottom:20px;left:20px;display:flex;flex-direction:column;gap:10px;z-index:1500}#modeButtons button{padding:8px 14px;font-size:1em;border:none;border-radius:8px;cursor:pointer;background:#4a90e2;color:white;font-weight:600;box-shadow:0 3px 6px rgba(0,0,0,0.15);transition:background-color .3s ease}#modeButtons button:hover{background:#357abd}#modeButtons button.active{background:#2c5dab}#hamburger-menu{position:fixed;top:15px;left:15px;z-index:3000}#hamburger-icon{width:32px;height:32px;cursor:pointer;padding:4px;background:#f8f8f8;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,0.15)}#hamburger-icon span{display:block;height:3px;background-color:#333;margin:5px 0;transition:.3s}#menu-panel{display:none;position:absolute;top:45px;left:0;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);padding:10px;width:200px}#menu-panel.open{display:block}#menu-panel button,#menu-panel a,#menu-panel label{display:block;width:100%;padding:10px;margin-bottom:5px;text-align:left;border:none;background:#f0f0f0;color:#333;font-size:1em;font-weight:600;border-radius:6px;cursor:pointer;transition:background-color .2s ease;text-decoration:none}#menu-panel button:hover,#menu-panel a:hover,#menu-panel label:hover{background:#e0e0e0}#seatContainer{max-width:900px;margin:0 auto;position:relative;transition:all .6s ease;opacity:1}#seatContainer.fade-out{opacity:0;transition:opacity .4s ease}#seatContainer.fade-in{opacity:1;transition:opacity .4s ease}.seat-grid{display:grid;gap:10px;transition:all .6s ease}.seat{background:#fff;border-radius:6px;border:2px solid #333;height:60px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-weight:bold;transition:background-color .3s,border-color .3s,transform .3s,opacity .3s,margin .3s;user-select:none;touch-action:manipulation}.seat.dimmed{opacity:.3}.seat.dragging{opacity:.5;border-style:dashed}@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(1.5deg)}50%{transform:rotate(0)}75%{transform:rotate(-1.5deg)}}.moving-mode .seat{animation:shake .3s infinite ease-in-out;cursor:grab}.seat span.name{pointer-events:none}.seat .seat-number{position:absolute;top:6px;left:8px;font-size:.75em;color:#555;user-select:none}.present{background-color:#d4f4dd;border-color:#2e7d32;color:#2e7d32}.absent{background-color:#f8d7da;border-color:#b71c1c;color:#b71c1c}.late{background-color:#fff3cd;border-color:#ff9800;color:#ff9800}.early-leave{background-color:#d1ecf1;border-color:#017b92;color:#017b92}.official-absence{background-color:#e0e0e0;border-color:#616161;color:#616161}.status-label{position:absolute;top:6px;right:8px;font-size:.75em;font-weight:normal;user-select:none}#absentLists{display:flex;max-width:900px;margin:30px auto 0;gap:15px;user-select:text;flex-wrap:wrap}.absentListBlock{background:#fff;flex:1 1 200px;border-radius:6px;padding:10px 15px;box-shadow:0 0 8px rgba(0,0,0,0.1)}.absentListBlock h2{margin-top:0;font-size:1.1em;text-align:center}.absentListBlock.absent h2{color:#b71c1c}.absentListBlock.late h2{color:#ff9800}.absentListBlock.early-leave h2{color:#017b92}.absentListBlock.official-absence h2{color:#616161}.absentListBlock ul{list-style:none;padding-left:0;margin:0;font-size:1em}.absentListBlock ul li{margin:4px 0;color:#333;text-align:center}.mode-seat{grid-template-columns:repeat(6, 1fr)}#seatContainer.mode-number2cols{display:flex;justify-content:center;gap:20px;max-width:900px}#seatContainer.mode-number2cols .col{display:grid;grid-template-columns:1fr;gap:10px;width:45%}#seatContainer.mode-number2cols .seat-grid{grid-template-columns:1fr}#centerLine{position:absolute;top:0;bottom:0;width:2px;background:#333;left:50%;transform:translateX(-50%);z-index:1000;display:none}.top-ui-container,#nameSettings{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#fff;padding:20px 25px 15px 25px;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,0.15);z-index:2100;user-select:none;display:none;flex-wrap:wrap;gap:15px;align-items:center;max-width:800px}#nameSettings{user-select:text}.top-ui-container label,#nameSettings label{font-weight:700;margin-right:5px;color:#333}.top-ui-container input,#nameSettings input{padding:6px 10px;margin-right:12px;font-size:1em;border:1.5px solid #ccc;border-radius:6px;transition:border-color .3s ease}.top-ui-container input:focus,#nameSettings input:focus{border-color:#4a90e2;outline:none}.top-ui-container button,#nameSettings button{padding:8px 18px;font-size:1em;cursor:pointer;background:#4caf50;border:none;color:white;border-radius:8px;font-weight:700;transition:background-color .3s ease}.top-ui-container button:hover,#nameSettings button:hover{background:#388e3c}.close-btn{position:absolute;top:8px;right:15px;font-size:24px;font-weight:bold;color:#888;cursor:pointer;transition:color .2s}.close-btn:hover{color:#333}#searchInput{width:200px}#historySelect{padding:6px 10px;font-size:1em;border-radius:8px;border:1.5px solid #ccc;outline:none;cursor:pointer}#historySelect:disabled{background:#eee;cursor:default}#btnShowCurrent{padding:6px 14px;font-size:1em;background:#4caf50}#infoMsg{position:fixed;top:130px;left:50%;transform:translateX(-50%);font-size:.9em;color:#666;user-select:none;z-index:2100}#aggregationResult{width:100%;margin-top:10px;padding-top:10px;border-top:1px solid #eee;font-size:.95em;line-height:1.6;user-select:text}#aggregationResult strong{color:#2c5dab}#loader-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;transition:opacity .3s ease}#loader-overlay.hidden{opacity:0;pointer-events:none}.spinner{border:6px solid #f3f3f3;border-top:6px solid #4a90e2;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+            .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,0.6);z-index:10000;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:opacity .3s ease}.modal-overlay.visible{opacity:1;pointer-events:auto}.modal-content{background:#fff;padding:25px 35px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.2);text-align:center;max-width:450px;width:90%;transform:scale(.9);transition:transform .3s ease}.modal-overlay.visible .modal-content{transform:scale(1)}.modal-content h3{margin-top:0;color:#b71c1c}.modal-content p{color:#333;margin-bottom:20px}#backup-key-display{background:#eee;padding:15px;border-radius:6px;font-family:'Courier New',Courier,monospace;font-size:1.1em;color:#d32f2f;font-weight:bold;word-break:break-all;margin-bottom:20px;user-select:text}.modal-content button{padding:10px 20px;font-size:1em;border:none;border-radius:8px;cursor:pointer;transition:background-color .3s ease;margin:0 10px}#copy-backup-key-btn{background:#4a90e2;color:white;font-weight:bold}#copy-backup-key-btn:hover{background:#357abd}#close-backup-key-modal-btn{background:#ccc}#close-backup-key-modal-btn:hover{background:#bbb}#password-strength-indicator{font-size:.85em;text-align:right;height:1.2em;margin-top:-10px;margin-bottom:10px;font-weight:bold}.strength-0,.strength-1{color:#e53935}.strength-2{color:#f57c00}.strength-3{color:#43a047}.strength-4{color:#2e7d32}#reset-password-modal .modal-content{text-align:left}#reset-password-modal h3{color:#333}#reset-password-modal label{display:block;text-align:left;font-weight:bold;margin-bottom:5px;font-size:.9em}#reset-password-modal input{width:calc(100% - 24px);padding:12px;margin-bottom:15px;font-size:1em;border:1.5px solid #ccc;border-radius:6px}#reset-password-modal .modal-actions{text-align:right;margin-top:20px}#reset-password-btn{background:#4caf50;color:white}#cancel-reset-btn{background:#ccc}
+            .policy-modal .modal-content{max-width:650px;text-align:left}.policy-modal h2{margin-top:0;margin-bottom:20px;color:#333;text-align:center}.policy-modal .modal-body{max-height:60vh;overflow-y:auto;text-align:left;padding:10px 15px;border-top:1px solid #eee;border-bottom:1px solid #eee;font-size:.9em;line-height:1.7;color:#555}.policy-modal .modal-body h4{margin-top:1.5em;margin-bottom:.5em;color:#333}.policy-modal .modal-body p,.policy-modal .modal-body ul{margin-bottom:1em}.policy-modal .modal-body ul{padding-left:20px}.policy-modal .modal-actions{text-align:center;margin-top:20px}#copyright{font-size:.75em;color:#999;text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #e0e0e0;user-select:text}
+            #force-login-btn { background: #e53935; color: white; margin-top: 10px; }
+            #force-login-btn:hover { background: #c62828; }
+            /* --- 新機能・修正のCSS --- */
+            .seat.caution { background-color: #c8e6c9; border-color: #1b5e20; color: #1b5e20; }
+            .memo-indicator { position: absolute; bottom: 4px; right: 6px; width: 12px; height: 12px; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm0 14H6v-2h12v2zm0-3H6V9h12v4zm0-5H6V6h12v2z"/></svg>'); background-size: contain; }
+            #memo-modal .modal-content, #settings-modal .modal-content { max-width: 500px; text-align: left; }
+            #memo-modal h3, #settings-modal h3 { color: #333; text-align: center; }
+            #memo-modal-student-name { font-weight: bold; font-size: 1.2em; }
+            #memo-modal-status { display: inline-block; padding: 2px 8px; border-radius: 4px; color: white; margin-left: 10px; font-size: 0.9em; }
+            #memo-text { width: calc(100% - 20px); height: 100px; padding: 10px; margin-top: 15px; border-radius: 6px; border: 1.5px solid #ccc; font-size: 1em; }
+            #memo-modal .modal-actions, #settings-modal .modal-actions { text-align: right; margin-top: 20px; }
+            .settings-grid { display: grid; grid-template-columns: 150px 1fr; gap: 15px; align-items: center; }
+            .settings-grid label { font-weight: bold; }
+            .settings-grid input[type="number"] { width: 80px; padding: 8px; }
+            .settings-grid .radio-group { display: flex; gap: 15px; }
+            #seatContainer.align-right .seat-grid { justify-content: flex-end; }
+            #seatContainer.align-left .seat-grid { justify-content: flex-start; }
+            /* グループモード用のスタイル */
+            #seatGrid.mode-group { grid-template-columns: repeat(6, 1fr); }
+            #seatGrid.mode-group.group-size-4 .seat:nth-child(4n) { margin-right: 25px; }
+            #seatGrid.mode-group.group-size-4 .seat:nth-child(6n) { margin-right: 0; }
+            #seatGrid.mode-group.group-size-6 .seat:nth-child(6n) { margin-right: 0; margin-bottom: 20px; } /* 6列なので右マージンは不要、下マージンで行間を表現 */
+
+        </style>
+    </head>
+    <body>
+        <div id="loader-overlay" class="hidden"><div class="spinner"></div></div>
+        <!-- (バックアップキー、パスワードリセット、利用規約、プライバシーポリシーのモーダルは変更なし) -->
+        <div id="backup-key-modal" class="modal-overlay"><div class="modal-content"><h3>重要：バックアップキーを保管してください</h3><p>このキーはパスワードを忘れた際に必要になります。<br><strong>この画面を閉じると二度と表示されません。</strong>必ず安全な場所にコピーして保管してください。</p><div id="backup-key-display"></div><div><button id="copy-backup-key-btn">クリップボードにコピー</button><button id="close-backup-key-modal-btn">保管しました</button></div></div></div><div id="reset-password-modal" class="modal-overlay"><div class="modal-content"><h3>パスワードのリセット</h3><p>アカウント情報とバックアップキー、新しいパスワードを入力してください。</p><div id="reset-error" style="color:#e53935; margin-bottom:15px; font-weight:bold;"></div><label for="reset-school">学校名</label><input type="text" id="reset-school" autocomplete="organization"><label for="reset-class">クラス名</label><input type="text" id="reset-class" autocomplete="off"><label for="reset-backup-key">バックアップキー</label><input type="text" id="reset-backup-key" autocomplete="off"><label for="reset-new-password">新しいパスワード (8文字以上)</label><input type="password" id="reset-new-password" autocomplete="new-password"><div class="modal-actions"><button id="cancel-reset-btn">キャンセル</button><button id="reset-password-btn">パスワードをリセット</button></div></div></div><div id="terms-modal" class="modal-overlay policy-modal"><div class="modal-content"><h2>利用規約</h2><div class="modal-body"><h4>第1条（はじめに）</h4><p>この利用規約（以下、「本規約」といいます。）は、「出席係管理サイト」（以下、「本サービス」といいます。）の利用条件を定めるものです。利用者の皆様（以下、「ユーザー」といいます。）には、本規約に従って本サービスをご利用いただきます。</p><h4>第2条（アカウント）</h4><p>1. ユーザーは、本サービスの利用にあたり、自己の責任においてアカウント情報（学校名、クラス名、パスワード）およびパスワードリセットに用いるバックアップキーを登録・管理するものとします。</p><p>2. ユーザーは、いかなる場合においても、アカウントを第三者に譲渡または貸与することはできません。</p><p>3. 当方は、入力されたアカウント情報とパスワードの組み合わせが登録情報と一致してログインされた場合には、そのアカウントを登録しているユーザー自身による利用とみなします。</p><h4>第3条（禁止事項）</h4><p>ユーザーは、本サービスの利用にあたり、以下の行為をしてはなりません。</p><ul><li>法令または公序良俗に違反する行為</li><li>犯罪行為に関連する行為</li><li>虚偽の情報でアカウント登録を行う行為</li><li>本サービスのサーバーやネットワークの機能を破壊したり、妨害したりする行為</li><li>他のユーザーのアカウントを利用する行為</li><li>その他、当方が不適切と判断する行為</li></ul><h4>第4条（免責事項）</h4><p>1. 当方は、本サービスに事実上または法律上の瑕疵（安全性、信頼性、正確性、完全性、有効性、特定の目的への適合性、セキュリティなどに関する欠陥、エラーやバグ、権利侵害などを含みます。）がないことを明示的にも黙示的にも保証しておりません。</p><p>2. 当方は、本サービスに起因してユーザーに生じたあらゆる損害について、一切の責任を負いません。ただし、当方の故意または重過失による損害の場合はこの限りではありません。</p><p>3. 当方は、サーバーメンテナンス等の理由により、ユーザーに事前に通知することなく本サービスを停止または中断することがあります。</p><h4>第5条（規約の変更）</h4><p>当方は、必要と判断した場合には、ユーザーに通知することなくいつでも本規約を変更することができるものとします。変更後の規約は、本サービス上に掲載したときから効力を生じるものとします。</p></div><div class="modal-actions"><button class="close-modal-btn">閉じる</button></div></div></div><div id="privacy-modal" class="modal-overlay policy-modal"><div class="modal-content"><h2>プライバシーポリシー</h2><div class="modal-body"><h4>1. はじめに</h4><p>「出席係管理サイト」（以下、「本サービス」といいます。）は、ユーザーのプライバシー情報の取り扱いについて、以下のとおりプライバシーポリシー（以下、「本ポリシー」といいます。）を定めます。</p><h4>2. 取得する情報</h4><p>本サービスでは、利用目的を達成するために必要な範囲で、以下の情報を取得します。</p><ul><li><strong>ユーザーからご提供いただく情報</strong>: 学校名、クラス名、パスワード、バックアップキー（これらは復元不可能なハッシュ形式で安全に保存されます）、生徒の出席番号、氏名、出欠状況</li><li><strong>自動的に取得する情報</strong>: 本サービスの認証状態を維持するためのセッショントークン</li></ul><h4>3. 情報の利用目的</h4><p>取得した情報は、以下の目的で利用いたします。</p><ul><li>本サービスの提供、運営、改善のため</li><li>ユーザーの認証、ログイン機能の提供のため</li><li>パスワードを紛失した際の再設定機能を提供するため</li><li>ユーザーからのお問い合わせに対応するため</li></ul><h4>4. 情報の第三者提供</h4><p>当方は、次に掲げる場合を除いて、あらかじめユーザーの同意を得ることなく、第三者に個人情報を提供することはありません。</p><ul><li>法令に基づく場合</li><li>人の生命、身体または財産の保護のために必要がある場合であって、本人の同意を得ることが困難であるとき</li><li>公衆衛生の向上または児童の健全な育成の推進のために特に必要がある場合であって、本人の同意を得ることが困難であるとき</li></ul><h4>5. 情報の管理</h4><p>当方は、ユーザーの情報への不正アクセス、紛失、破壊、改ざんおよび漏洩などを防止するため、セキュアな通信（HTTPS）やパスワードのハッシュ化など、厳重なセキュリティ対策を講じています。情報はGoogleスプレッドシートおよびGoogle Apps Scriptの関連サービス上で安全に管理されます。</p><h4>6. 本ポリシーの変更</h4><p>本ポリシーの内容は、法令その他本ポリシーに別段の定めのある事項を除いて、ユーザーに通知することなく、変更することができるものとします。変更後のプライバシーポリシーは、本サービス上に掲載したときから効力を生じるものとします。</p></div><div class="modal-actions"><button class="close-modal-btn">閉じる</button></div></div></div>
+        
+        <!-- メモ入力モーダル -->
+        <div id="memo-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>メモの編集</h3>
+                <div>
+                    <span id="memo-modal-student-name"></span>
+                    <span id="memo-modal-status"></span>
+                </div>
+                <textarea id="memo-text" placeholder="遅刻理由や欠席連絡の詳細などを入力..."></textarea>
+                <div class="modal-actions">
+                    <button id="cancel-memo-btn">キャンセル</button>
+                    <button id="save-memo-btn" style="background:#4caf50;color:white;">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- クラス設定モーダル -->
+        <div id="settings-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>クラス設定</h3>
+                <div class="settings-grid">
+                    <label for="settings-total-seats">合計座席数</label>
+                    <input type="number" id="settings-total-seats" min="1" max="50">
+
+                    <label>座席の表示位置</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="alignment" value="left"> 左寄せ</label>
+                        <label><input type="radio" name="alignment" value="right"> 右寄せ</label>
+                    </div>
+
+                    <label>グループの人数</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="group-size" value="4"> 4人</label>
+                        <label><input type="radio" name="group-size" value="6"> 6人</label>
+                    </div>
+
+                    <label for="settings-caution-days">連続欠席の警告</label>
+                    <input type="number" id="settings-caution-days" min="1" max="30">
+                </div>
+                 <p style="font-size:0.8em; color:#666; margin-top:15px;">※座席数を変更すると、超過分の生徒データは削除されます。ご注意ください。</p>
+                <div class="modal-actions">
+                    <button id="cancel-settings-btn">キャンセル</button>
+                    <button id="save-settings-btn" style="background:#4caf50;color:white;">設定を保存</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="login-container"><div id="login-box"><h2 id="login-title">ログイン</h2><p id="login-message">アカウント情報を入力してください。</p><input type="text" id="login-school" placeholder="学校名" autocomplete="organization"><input type="text" id="login-class" placeholder="クラス名" autocomplete="off"><input type="password" id="login-password" placeholder="パスワード" autocomplete="new-password"><div id="password-strength-indicator"></div><button id="login-btn">ログイン</button>
+        <button id="force-login-btn" style="display: none;">強制的にログイン</button>
+        <p id="login-error"></p><div id="account-actions"><a id="switch-to-register-link">新規登録はこちら</a><a id="password-reset-link">パスワードを忘れた方</a></div></div></div>
+        
+        <div id="main-container" style="display: none;">
+            <div id="currentTime"></div><div id="cancelMoveBtn">キャンセル</div>
+            <div id="hamburger-menu">
+                <div id="hamburger-icon"><span></span><span></span><span></span></div>
+                <div id="menu-panel">
+                    <button id="toggleSettingsBtn">クラス設定</button>
+                    <hr style="border:none; border-top:1px solid #ccc; margin: 10px 0;">
+                    <button id="toggleNameFormBtn">名前変更</button>
+                    <button id="toggleSearchBtn">検索/履歴</button>
+                    <button id="toggleAggregationBtn">集計</button>
+                    <button id="resetBtn">全員出席にリセット</button>
+                    <button id="reload-btn">手動で同期</button> 
+                    <button id="manual-save-btn">手動で保存</button>
+                    <hr style="border:none; border-top:1px solid #ccc; margin: 10px 0;">
+                    <button id="show-terms-btn">利用規約</button>
+                    <button id="show-privacy-btn">プライバシーポリシー</button>
+                    <hr style="border:none; border-top:1px solid #ccc; margin: 10px 0;">
+                    <button id="logout-btn">ログアウト</button>
+                    <div id="copyright">© 2025 OcearyaGroup 底原永和</div>
+                </div>
+            </div>
+            
+            <h1>出席係管理</h1>
+            <div id="nameSettings" class="top-ui-container"><span class="close-btn">×</span><label for="inputNumber">出席番号:</label><input type="number" id="inputNumber" min="1" max="50" placeholder="番号"/><label for="inputName">名前:</label><input type="text" id="inputName" placeholder="例:鈴木 一郎"/><button id="btnUpdateName">変更</button><span id="updateMsg" style="margin-left:10px;color:#2e7d32;display:none;">更新しました</span></div><div id="searchContainer" class="top-ui-container"><span class="close-btn">×</span><input type="text" id="searchInput" placeholder="名前検索..."/><select id="historySelect" disabled><option value="">履歴なし</option></select><button id="btnShowCurrent" disabled>現在データを表示</button></div><div id="aggregationContainer" class="top-ui-container"><span class="close-btn">×</span><label for="aggStudentNumber">出席番号:</label><input type="number" id="aggStudentNumber" min="1" max="50" placeholder="番号"><label for="aggStartDate">開始日:</label><input type="date" id="aggStartDate"><label for="aggEndDate">終了日:</label><input type="date" id="aggEndDate"><button id="runAggregationBtn">集計実行</button><div id="aggregationResult">集計結果はここに表示されます。</div></div>
+            <div id="infoMsg"></div>
+            
+            <div id="seatContainer">
+                <div id="seatGrid" class="seat-grid"></div>
+                <div id="colLeft" class="col"></div>
+                <div id="colRight" class="col"></div>
+                <div id="centerLine"></div>
+            </div>
+            
+            <div id="absentLists"><div class="absentListBlock absent"><h2>欠席</h2><ul id="absentListAbsent"></ul></div><div class="absentListBlock late"><h2>遅刻</h2><ul id="absentListLate"></ul></div><div class="absentListBlock early-leave"><h2>早退</h2><ul id="absentListEarly"></ul></div><div class="absentListBlock official-absence"><h2>公欠</h2><ul id="absentListOfficial"></ul></div></div>
+            <div id="saveStatus"></div>
+
+             <div id="modeButtons">
+                <button id="modeSeatBtn" class="active">6列席表示</button>
+                <button id="mode2ColsBtn">2列席表示</button>
+                <button id="modeGroupBtn">グループ表示</button>
+            </div>
+        </div>
+        
+        <script>
+            // === 機能追加・修正版 JavaScript ===
+
+            const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwst3eB65stxjSevYDgHH1CBC_X-F6A3hqvjmqz5Kehk7Mwd5ivSNNJxatsOoO81hobig/exec';
+
+            let isRegisterMode = false;
+            let seats = [];
+            let layout = [];
+            let settings = {};
+            let currentMode = "seat", movingMode = false, viewingHistory = false, isSaving = false, needsResave = false;
+            
+            const states = ["present", "absent", "late", "early-leave", "official-absence"];
+            const stateLabels = { "present": "出席", "absent": "欠席", "late": "遅刻", "early-leave": "早退", "official-absence": "公欠" };
+            const stateColors = { "present": "#2e7d32", "absent": "#b71c1c", "late": "#ff9800", "early-leave": "#017b92", "official-absence": "#616161" };
+
+            const DOM = {
+                loginContainer: document.getElementById('login-container'),
+                mainContainer: document.getElementById('main-container'),
+                loginSchool: document.getElementById('login-school'),
+                loginClass: document.getElementById('login-class'),
+                loginPassword: document.getElementById('login-password'),
+                loginBtn: document.getElementById('login-btn'),
+                forceLoginBtn: document.getElementById('force-login-btn'),
+                loginTitle: document.getElementById('login-title'),
+                loginMessage: document.getElementById('login-message'),
+                loginError: document.getElementById('login-error'),
+                switchToRegisterLink: document.getElementById('switch-to-register-link'),
+                passwordResetLink: document.getElementById('password-reset-link'),
+                logoutBtn: document.getElementById('logout-btn'),
+                loader: document.getElementById('loader-overlay'),
+                passwordStrengthIndicator: document.getElementById('password-strength-indicator'),
+                backupKeyModal: document.getElementById('backup-key-modal'),
+                backupKeyDisplay: document.getElementById('backup-key-display'),
+                copyBackupKeyBtn: document.getElementById('copy-backup-key-btn'),
+                closeBackupKeyModalBtn: document.getElementById('close-backup-key-modal-btn'),
+                resetPasswordModal: document.getElementById('reset-password-modal'),
+                termsModal: document.getElementById('terms-modal'),
+                privacyModal: document.getElementById('privacy-modal'),
+                saveStatus: document.getElementById('saveStatus'),
+                menuPanel: document.getElementById('menu-panel'),
+                memoModal: document.getElementById('memo-modal'),
+                settingsModal: document.getElementById('settings-modal')
+            };
+
+            const showLoader = (show) => DOM.loader.classList.toggle('hidden', !show);
+
+            async function callGas(action, payload = {}) {
+                if (action !== 'saveData' && action !== 'updateSettings') showLoader(true);
+                const token = sessionStorage.getItem('sessionToken');
+                if (token) payload.token = token;
+                try {
+                    const response = await fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, payload }) });
+                    if (!response.ok) throw new Error(`サーバーエラー: ${response.status}`);
+                    const result = await response.json();
+                    if (result.status === 'success') return result.data;
+                    if (result.reauth) {
+                        alert('セッションが無効か期限切れです。再度ログインしてください。');
+                        sessionStorage.clear(); location.reload();
+                        return;
+                    }
+                    throw new Error(result.message || 'サーバーで不明なエラーが発生しました。');
+                } catch (error) {
+                    console.error('GAS Error:', {action, error});
+                    const errorMessage = error.message.includes('Failed to fetch') ? 'サーバーに接続できませんでした。' : `エラー: ${error.message}`;
+                    if (DOM.mainContainer.style.display === 'none') {
+                        const activeErrorDisplay = DOM.resetPasswordModal.classList.contains('visible') ? document.getElementById('reset-error') : DOM.loginError;
+                        activeErrorDisplay.textContent = errorMessage;
+                    } else { 
+                        showSaveStatus(errorMessage, true); 
+                    }
+                    throw error;
+                } finally {
+                    if (action !== 'saveData' && action !== 'updateSettings') showLoader(false);
+                }
+            }
+            
+            function checkPasswordStrength(password) {
+                let score=0;if(password.length>=8)score++;if(password.length>=12)score++;if(/[a-z]/.test(password)&&/[A-Z]/.test(password))score++;if(/\d/.test(password))score++;if(/[^a-zA-Z0-9]/.test(password))score++;
+                const strengthText=["","非常に弱い","弱い","中","強力","非常に強力"],strengthClass=["","strength-0","strength-1","strength-2","strength-3","strength-4"];
+                const finalScore=Math.max(0,Math.min(score,5));
+                DOM.passwordStrengthIndicator.textContent=strengthText[finalScore];DOM.passwordStrengthIndicator.className=strengthClass[finalScore];
+            }
+            
+            function setupLoginScreen(isRegister = false) {
+                isRegisterMode=isRegister;DOM.loginTitle.textContent=isRegister?'新規登録':'ログイン';DOM.loginMessage.textContent=isRegister?'新しいアカウント情報を登録します。':'アカウント情報を入力してください。';DOM.loginBtn.textContent=isRegister?'登録':'ログイン';DOM.switchToRegisterLink.textContent=isRegister?'ログインはこちら':'新規登録はこちら';DOM.loginError.textContent='';DOM.loginPassword.value='';DOM.passwordStrengthIndicator.style.display=isRegister?'block':'none';
+                DOM.forceLoginBtn.style.display = 'none';
+                if(!isRegister){DOM.passwordStrengthIndicator.textContent='';DOM.passwordStrengthIndicator.className='';}
+            }
+            function showBackupKeyModal(key){DOM.backupKeyDisplay.textContent=key;DOM.backupKeyModal.classList.add('visible');}
+
+            async function handleLogin(isForced = false) {
+                const school = DOM.loginSchool.value.trim(), className = DOM.loginClass.value.trim(), password = DOM.loginPassword.value;
+                if (!school || !className || !password) { DOM.loginError.textContent = 'すべての項目を入力してください。'; return; }
+                DOM.loginBtn.disabled = true; DOM.forceLoginBtn.disabled = true;
+                DOM.loginError.textContent = ''; showLoader(true);
+                try {
+                    const loginResult = await callGas('login', { school, className, password, force: isForced });
+                    if (loginResult.status === 'occupied') {
+                        DOM.loginError.textContent = loginResult.message;
+                        DOM.forceLoginBtn.style.display = 'block';
+                    } else {
+                        sessionStorage.setItem('sessionToken', loginResult.token);
+                        sessionStorage.setItem('loggedInSchool', school);
+                        sessionStorage.setItem('loggedInClass', className);
+                        showMainApp();
+                    }
+                } catch (error) { /* handled in callGas */
+                } finally {
+                    DOM.loginBtn.disabled = false; DOM.forceLoginBtn.disabled = false; showLoader(false);
+                }
+            }
+
+            function addAuthEventListeners() {
+                DOM.loginPassword.addEventListener('input', () => { if (isRegisterMode) checkPasswordStrength(DOM.loginPassword.value); });
+                DOM.switchToRegisterLink.addEventListener('click', (e) => { e.preventDefault(); setupLoginScreen(!isRegisterMode); });
+                DOM.loginBtn.addEventListener('click', async () => {
+                    if (isRegisterMode) {
+                        const school = DOM.loginSchool.value.trim(), className = DOM.loginClass.value.trim(), password = DOM.loginPassword.value;
+                        if (!school || !className || !password) { DOM.loginError.textContent = 'すべての項目を入力してください。'; return; }
+                        DOM.loginBtn.disabled = true; DOM.loginError.textContent = '';
+                        try {
+                            if (password.length < 8) { DOM.loginError.textContent = 'パスワードは8文字以上で入力してください。'; throw new Error("Password too short."); }
+                            const registerResult = await callGas('register', { school, className, password });
+                            showBackupKeyModal(registerResult.backupKey);
+                            DOM.closeBackupKeyModalBtn.onclick = () => {
+                                DOM.backupKeyModal.classList.remove('visible');
+                                alert('登録が完了しました。\n自動的にログインします。');
+                                handleLogin(false);
+                            };
+                        } catch (error) { /* handled in callGas */ } finally { DOM.loginBtn.disabled = false; }
+                    } else {
+                        handleLogin(false);
+                    }
+                });
+                DOM.forceLoginBtn.addEventListener('click', () => handleLogin(true));
+                DOM.copyBackupKeyBtn.addEventListener('click',()=>{navigator.clipboard.writeText(DOM.backupKeyDisplay.textContent).then(()=>{DOM.copyBackupKeyBtn.textContent='コピーしました！';setTimeout(()=>{DOM.copyBackupKeyBtn.textContent='クリップボードにコピー'},2000);}).catch(err=>{alert('コピーに失敗しました。');});});
+                DOM.passwordResetLink.addEventListener('click',(e)=>{e.preventDefault();document.getElementById('reset-error').textContent='';DOM.resetPasswordModal.classList.add('visible');});
+                document.getElementById('cancel-reset-btn').addEventListener('click',()=>{DOM.resetPasswordModal.classList.remove('visible');});
+                document.getElementById('reset-password-btn').addEventListener('click', async () => {
+                    const school=document.getElementById('reset-school').value.trim(),className=document.getElementById('reset-class').value.trim(),backupKey=document.getElementById('reset-backup-key').value.trim(),newPassword=document.getElementById('reset-new-password').value,errorDiv=document.getElementById('reset-error');
+                    errorDiv.textContent = '';
+                    if (!school || !className || !backupKey || !newPassword) { errorDiv.textContent = 'すべての項目を入力してください。'; return; }
+                    if (newPassword.length < 8) { errorDiv.textContent = '新しいパスワードは8文字以上で入力してください。'; return; }
+                    try {
+                        const result = await callGas('resetPasswordWithBackupKey', { school, className, backupKey, newPassword });
+                        DOM.resetPasswordModal.classList.remove('visible'); alert(result.message); setupLoginScreen(false);
+                    } catch (error) { /* handled in callGas */ }
+                });
+                DOM.logoutBtn.addEventListener('click', () => { if (confirm('ログアウトしますか？')) { callGas('logout').finally(() => { sessionStorage.clear(); location.reload(); }); } });
+            }
+
+            function showMainApp() {
+                DOM.loginContainer.style.display = 'none'; DOM.mainContainer.style.display = 'block';
+                document.querySelector('h1').textContent = `${sessionStorage.getItem('loggedInSchool')} ${sessionStorage.getItem('loggedInClass')} 出席管理`;
+                initApp();
+            }
+            
+            document.addEventListener('DOMContentLoaded', () => {
+                if (sessionStorage.getItem('sessionToken')) { showMainApp(); } 
+                else { setupLoginScreen(false); addAuthEventListeners(); }
+                function showModal(modalElement) { modalElement.classList.add('visible'); }
+                document.getElementById('show-terms-btn').addEventListener('click', (e) => { e.stopPropagation(); showModal(DOM.termsModal); DOM.menuPanel.classList.remove('open'); });
+                document.getElementById('show-privacy-btn').addEventListener('click', (e) => { e.stopPropagation(); showModal(DOM.privacyModal); DOM.menuPanel.classList.remove('open'); });
+                document.querySelectorAll('.modal-overlay').forEach(overlay => { overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); }); });
+                document.querySelectorAll('.close-modal-btn').forEach(button => { button.addEventListener('click', () => { button.closest('.modal-overlay').classList.remove('visible'); }); });
+            });
+
+            function getDateTimeStr(d = new Date()) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
+            function getDateKey(d = new Date()) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+            function showSaveStatus(msg, isError = false) { DOM.saveStatus.textContent = msg; DOM.saveStatus.style.color = isError ? '#e53935' : 'rgba(0,0,0,0.5)'; DOM.saveStatus.style.opacity = 1; setTimeout(() => DOM.saveStatus.style.opacity = 0, 3000); }
+            
+            async function smartSave(comment) {
+                if (viewingHistory) return;
+                if (isSaving) {
+                    needsResave = true;
+                    showSaveStatus("変更を検出しました…");
+                    return;
+                }
+                isSaving = true;
+                showSaveStatus("クラウドに保存中…");
+                try {
+                    const payload = {
+                        todayData: seats.map(({ seatNumber, name, state, memo }) => ({ seatNumber, name, state, memo })),
+                        layout: layout.map(({ seatNumber, order }) => ({ seatNumber, order })),
+                        dateKey: getDateKey(),
+                        comment
+                    };
+                    const result = await callGas('saveData', payload);
+                    showSaveStatus("クラウドに保存しました");
+                } catch (e) { /* handled in callGas */
+                } finally {
+                    isSaving = false;
+                    if (needsResave) {
+                        needsResave = false;
+                        setTimeout(() => smartSave("連続した変更を保存"), 100); 
+                    }
+                }
+            }
+            
+            function createSeat(seatData) {
+                const div = document.createElement("div");
+                div.className = `seat ${seatData.state}`;
+                div.dataset.seatNumber = seatData.seatNumber;
+                div.addEventListener("click", () => {
+                    if (movingMode || viewingHistory) return;
+                    const currentIndex = states.indexOf(seatData.state);
+                    const nextIndex = (currentIndex + 1) % states.length;
+                    seatData.state = states[nextIndex];
+                    updateSeatAppearance(div, seatData);
+                    renderAbsentLists();
+                    smartSave(`State changed: seat ${seatData.seatNumber} to ${seatData.state}`);
+                });
+                updateSeatAppearance(div, seatData);
+                return div;
+            }
+
+            function updateSeatAppearance(element, seatData) {
+                element.className = `seat ${seatData.state}`; 
+                if(seatData.isCaution) element.classList.add('caution');
+                let memoIndicator = seatData.memo ? `<div class="memo-indicator"></div>` : '';
+                element.innerHTML = `<span class="seat-number">${seatData.seatNumber}</span><span class="name">${seatData.name}</span><span class="status-label">${stateLabels[seatData.state] || ""}</span>${memoIndicator}`;
+                const indicator = element.querySelector('.memo-indicator');
+                if(indicator) {
+                    indicator.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openMemoModal(seatData.seatNumber);
+                    });
+                }
+            }
+            
+            function renderSeats() {
+                const seatContainer = document.getElementById("seatContainer");
+                const seatGrid = document.getElementById("seatGrid"), colLeft = document.getElementById("colLeft"), colRight = document.getElementById("colRight");
+                
+                seatGrid.innerHTML = ""; colLeft.innerHTML = ""; colRight.innerHTML = "";
+                
+                seatContainer.className = `align-${settings.alignment || 'left'}`;
+                seatGrid.className = 'seat-grid';
+                
+                if (currentMode === 'seat' || currentMode === 'group') {
+                    const sortedLayout = [...layout].sort((a,b) => a.order - b.order);
+                    const seatsToRender = sortedLayout.map(layoutItem => seats.find(s => s.seatNumber === layoutItem.seatNumber)).filter(Boolean);
+                    
+                    seatGrid.classList.add(currentMode === 'group' ? 'mode-group' : 'mode-seat');
+                    if (currentMode === 'group') {
+                        seatGrid.classList.add(`group-size-${settings.groupSize || 6}`);
+                    }
+                    seatsToRender.forEach(seatData => seatGrid.appendChild(createSeat(seatData)));
+                
+                } else if (currentMode === 'number2cols') {
+                    seatContainer.classList.add('mode-number2cols');
+                    const halfPoint = Math.ceil(settings.totalSeats / 2);
+                    const sortedSeatsByNumber = [...seats].sort((a,b) => a.seatNumber - b.seatNumber);
+                    
+                    sortedSeatsByNumber.forEach(seatData => {
+                        const seatElement = createSeat(seatData);
+                        const targetCol = (sortedSeatsByNumber.findIndex(s => s.seatNumber === seatData.seatNumber) < halfPoint) ? colRight : colLeft;
+                        targetCol.appendChild(seatElement);
+                    });
+                }
+                
+                seatGrid.style.display = (currentMode === 'seat' || currentMode === 'group') ? 'grid' : 'none';
+                colLeft.style.display = colRight.style.display = document.getElementById("centerLine").style.display = currentMode === 'number2cols' ? "grid" : "none";
+            }
+
+            function renderAbsentLists() {
+                const lists = {absent: "absentListAbsent", late: "absentListLate", "early-leave": "absentListEarly", "official-absence": "absentListOfficial"};
+                Object.values(lists).forEach(id => document.getElementById(id).innerHTML = '');
+                seats.filter(s => s.state !== 'present').forEach(s => {
+                    const listId = lists[s.state];
+                    if (listId) {
+                        const li = document.createElement('li');
+                        li.textContent = s.name;
+                        document.getElementById(listId).appendChild(li);
+                    }
+                });
+            }
+
+            async function initApp() {
+                const hamburgerIcon = document.getElementById('hamburger-icon');
+                const cancelMoveBtn = document.getElementById('cancelMoveBtn');
+                let longPressTimer = null, draggedSeatData = null;
+
+                document.getElementById('currentTime').textContent = getDateTimeStr();
+                setInterval(() => document.getElementById('currentTime').textContent = getDateTimeStr(), 1000);
+
+                const btnIdMap = { seat: 'modeSeatBtn', number2cols: 'mode2ColsBtn', group: 'modeGroupBtn' };
+                const switchMode = (newMode) => {
+                    if (newMode === currentMode) return;
+                    currentMode = newMode;
+                    Object.values(btnIdMap).forEach(id => document.getElementById(id).classList.remove('active'));
+                    document.getElementById(btnIdMap[newMode]).classList.add('active');
+                    renderSeats();
+                };
+                Object.keys(btnIdMap).forEach(mode => document.getElementById(btnIdMap[mode]).addEventListener("click", () => switchMode(mode)));
+                
+                hamburgerIcon.addEventListener("click", (e) => { e.stopPropagation(); DOM.menuPanel.classList.toggle("open"); });
+                document.addEventListener("click", () => { DOM.menuPanel.classList.remove("open"); });
+                document.getElementById('reload-btn').addEventListener('click', () => { initData(); DOM.menuPanel.classList.remove('open'); });
+                document.getElementById('manual-save-btn').addEventListener('click', (e) => { e.stopPropagation(); smartSave('Manual Save'); DOM.menuPanel.classList.remove("open"); });
+
+                const panels = { name: document.getElementById('nameSettings'), search: document.getElementById('searchContainer'), agg: document.getElementById('aggregationContainer') };
+                const setupMenuButton = (btnId, panel) => { document.getElementById(btnId).addEventListener('click', (e) => { e.stopPropagation(); const isVisible = panel.style.display !== "none"; Object.values(panels).forEach(p => p.style.display = 'none'); if (!isVisible) panel.style.display = panel.id === 'nameSettings' ? 'block' : 'flex'; DOM.menuPanel.classList.remove("open"); }); };
+                setupMenuButton('toggleNameFormBtn', panels.name);
+                setupMenuButton('toggleSearchBtn', panels.search);
+                setupMenuButton('toggleAggregationBtn', panels.agg);
+                
+                document.querySelectorAll('.close-btn').forEach(btn => btn.addEventListener('click', e => e.target.parentElement.style.display = 'none'));
+                
+                document.getElementById('btnUpdateName').addEventListener("click", () => {
+                    const num = Number(document.getElementById('inputNumber').value), newName = document.getElementById('inputName').value.trim();
+                    if (num < 1 || num > settings.totalSeats || !newName) return alert("正しい番号と名前を入力してください。");
+                    const seatToUpdate = seats.find(s => s.seatNumber === num);
+                    if (seatToUpdate) {
+                        seatToUpdate.name = newName;
+                        renderSeats(); renderAbsentLists();
+                        smartSave(`Name updated for seat ${num}`);
+                        const msg = document.getElementById('updateMsg');
+                        msg.style.display = "inline";
+                        setTimeout(() => msg.style.display = "none", 2000);
+                    }
+                });
+                
+                const seatContainerElem=document.getElementById('seatContainer');
+                const startMoveMode=(target)=>{if(movingMode||viewingHistory||currentMode === 'number2cols'||!target)return;longPressTimer=setTimeout(()=>{movingMode=true;document.body.classList.add("moving-mode");cancelMoveBtn.style.display="block";},500);};
+                const cancelMoveModeTimer=()=>clearTimeout(longPressTimer);
+                seatContainerElem.addEventListener("mousedown",(e)=>startMoveMode(e.target.closest(".seat")));
+                seatContainerElem.addEventListener("mouseup",cancelMoveModeTimer);seatContainerElem.addEventListener("mouseleave",cancelMoveModeTimer);
+                seatContainerElem.addEventListener("touchstart",(e)=>startMoveMode(e.target.closest(".seat")),{passive:true});
+                seatContainerElem.addEventListener("touchend",cancelMoveModeTimer);seatContainerElem.addEventListener("touchcancel",cancelMoveModeTimer);
+                document.addEventListener('dragstart',e=>e.preventDefault());
+                
+                document.addEventListener('mousedown',(e)=>{if(movingMode){const target=e.target.closest('.seat');if(target){const seatNumber = Number(target.dataset.seatNumber); draggedSeatData = layout.find(s => s.seatNumber === seatNumber); target.classList.add('dragging');}}});
+                document.addEventListener('mouseup',()=>{if(movingMode&&draggedSeatData){document.querySelector(`.seat.dragging`)?.classList.remove('dragging');draggedSeatData=null;}});
+                seatContainerElem.addEventListener('mouseover',(e)=>{if(movingMode&&draggedSeatData){const targetSeatElem=e.target.closest('.seat');if(targetSeatElem){const targetSeatNumber=Number(targetSeatElem.dataset.seatNumber); const targetSeatData=layout.find(s=>s.seatNumber===targetSeatNumber);if(targetSeatData&&draggedSeatData!==targetSeatData){const fromOrder=draggedSeatData.order, toOrder=targetSeatData.order;draggedSeatData.order = toOrder; targetSeatData.order = fromOrder; renderSeats();}}}});
+                cancelMoveBtn.addEventListener("click",()=>{movingMode=false;document.body.classList.remove("moving-mode");cancelMoveBtn.style.display="none"; smartSave('Seat layout changed');});
+                
+                document.getElementById('resetBtn').addEventListener("click",()=>{if(confirm("全員を出席にリセットしますか？")){seats.forEach(s=>s.state='present');renderSeats();renderAbsentLists(); smartSave('Manual Reset');}});
+                document.getElementById('searchInput').addEventListener("input",renderSeats);
+                
+                document.getElementById('historySelect').addEventListener("change",async e=>{ const date=e.target.value; if(date){ viewingHistory=true; const historyData = await callGas('loadHistory',{date}); seats.forEach(s => { const record = historyData.todayData.find(h => h.seatNumber === s.seatNumber); s.state = record ? record.state : 'present'; s.memo = record ? record.memo : ''; }); renderSeats(); renderAbsentLists(); document.getElementById('infoMsg').textContent=`履歴表示中：${date}`; document.getElementById('btnShowCurrent').disabled=false; }});
+                document.getElementById('btnShowCurrent').addEventListener("click",()=>{viewingHistory=false;document.getElementById('infoMsg').textContent="";document.getElementById('historySelect').value="";initData();document.getElementById('btnShowCurrent').disabled=true;});
+                
+                document.getElementById('runAggregationBtn').addEventListener("click", async () => { const num=Number(document.getElementById('aggStudentNumber').value),start=document.getElementById('aggStartDate').value,end=document.getElementById('aggEndDate').value; if(!num||!start||!end||start>end)return alert("正しい番号と期間を入力してください。"); const resultContainer=document.getElementById('aggregationResult');resultContainer.innerHTML='集計中…'; try{ const { history, name } = await callGas('runAggregation',{seatNumber:num,startDate:start,endDate:end}); if(!name){resultContainer.textContent='指定された出席番号の生徒が見つかりません。';return;} const counts={present:0,absent:0,late:0,"early-leave":0,"official-absence":0}; history.forEach(d=>{if(counts[d.state]!==undefined)counts[d.state]++;}); const totalDays = new Set(history.map(d => d.date.split('T')[0])).size; if(totalDays===0){resultContainer.textContent=`対象期間の履歴がありません。`;return;} const totalAttendance=counts.present+counts.late+counts["early-leave"],attDays=totalDays-counts["official-absence"],attRate=attDays>0?(counts.present/attDays*100).toFixed(1):0; resultContainer.innerHTML = `<strong>${name}</strong> (${totalDays}日間)<br>合計登校 (出席/遅刻/早退): <strong>${totalAttendance}</strong> 回<br>--------------------------------<br>出席: ${counts.present}, 遅刻: ${counts.late}, 早退: ${counts["early-leave"]}, 欠席: ${counts.absent}, 公欠: ${counts["official-absence"]}<br>出席率(純粋): <strong>${attRate}%</strong>`; } catch(e) { resultContainer.textContent='集計中にエラーが発生しました。'; }});
+                
+                initMemoModal();
+                initSettingsModal();
+
+                async function initData() {
+                    try {
+                        const data = await callGas('loadInitialData');
+                        settings = data.settings;
+                        seats = data.students.map(student => {
+                            const today = data.todayData.find(d => d.seatNumber === student.seatNumber);
+                            return { ...student, state: today ? today.state : 'present', memo: today ? today.memo : '', isCaution: data.cautionStudents.includes(student.seatNumber) };
+                        });
+                        layout = data.layout;
+                        
+                        const historySelect = document.getElementById('historySelect');
+                        historySelect.innerHTML = "";
+                        if (data.historyDates && data.historyDates.length > 0) {
+                            historySelect.disabled = false;
+                            historySelect.innerHTML = '<option value="">-- 過去の履歴を選択 --</option>';
+                            data.historyDates.forEach(date => historySelect.add(new Option(date, date)));
+                        } else {
+                            historySelect.innerHTML = '<option value="">履歴なし</option>';
+                            historySelect.disabled = true;
+                        }
+                        renderSeats();
+                        renderAbsentLists();
+                    } catch (e) {
+                        alert("データの初期化に失敗しました。ページを再読み込みしてください。");
+                    }
+                }
+                
+                await initData();
+            }
+
+            function openMemoModal(seatNumber) {
+                const seat = seats.find(s => s.seatNumber === seatNumber);
+                if (!seat) return;
+                const modal = DOM.memoModal;
+                modal.dataset.seatNumber = seatNumber;
+                document.getElementById('memo-modal-student-name').textContent = `${seat.seatNumber}. ${seat.name}`;
+                const statusSpan = document.getElementById('memo-modal-status');
+                statusSpan.textContent = stateLabels[seat.state];
+                statusSpan.style.backgroundColor = stateColors[seat.state];
+                document.getElementById('memo-text').value = seat.memo || '';
+                modal.classList.add('visible');
+            }
+
+            function initMemoModal() {
+                const modal = DOM.memoModal;
+                document.getElementById('cancel-memo-btn').addEventListener('click', () => modal.classList.remove('visible'));
+                document.getElementById('save-memo-btn').addEventListener('click', () => {
+                    const seatNumber = Number(modal.dataset.seatNumber);
+                    const seat = seats.find(s => s.seatNumber === seatNumber);
+                    if (seat) {
+                        seat.memo = document.getElementById('memo-text').value;
+                        smartSave(`Memo updated for seat ${seatNumber}`);
+                        renderSeats();
+                    }
+                    modal.classList.remove('visible');
+                });
+            }
+
+            function initSettingsModal() {
+                const modal = DOM.settingsModal;
+                document.getElementById('toggleSettingsBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('settings-total-seats').value = settings.totalSeats;
+                    document.querySelector(`input[name="alignment"][value="${settings.alignment}"]`).checked = true;
+                    document.querySelector(`input[name="group-size"][value="${settings.groupSize}"]`).checked = true;
+                    document.getElementById('settings-caution-days').value = settings.cautionDays;
+                    modal.classList.add('visible');
+                    DOM.menuPanel.classList.remove("open");
+                });
+                document.getElementById('cancel-settings-btn').addEventListener('click', () => modal.classList.remove('visible'));
+                document.getElementById('save-settings-btn').addEventListener('click', async () => {
+                    const newSettings = {
+                        totalSeats: parseInt(document.getElementById('settings-total-seats').value),
+                        alignment: document.querySelector('input[name="alignment"]:checked').value,
+                        groupSize: parseInt(document.querySelector('input[name="group-size"]:checked').value),
+                        cautionDays: parseInt(document.getElementById('settings-caution-days').value)
+                    };
+                    showLoader(true);
+                    try {
+                        await callGas('updateSettings', { settings: newSettings });
+                        alert('設定を保存しました。画面を更新します。');
+                        location.reload();
+                    } catch (error) {
+                         alert('設定の保存に失敗しました。');
+                    } finally {
+                        showLoader(false);
+                        modal.classList.remove('visible');
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>
